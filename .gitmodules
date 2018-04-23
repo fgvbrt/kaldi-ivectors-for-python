@@ -1,3 +1,0 @@
-[submodule "kaldi_io"]
-	path = kaldi_io
-	url = https://github.com/nicanorgarcia/kaldi-io-for-python.git
