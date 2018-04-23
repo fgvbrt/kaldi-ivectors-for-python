@@ -1,8 +1,9 @@
 import os
 from kaldi_io import kaldi_io
 import numpy as np
+dir_name = os.path.dirname(os.path.realpath(__file__))
 
-def gen_feats_file(data_feats,ids,feat_filename):
+def gen_feats_file(data_feats, ids, feat_filename):
     """
     This function goes through the contents of a Kaldi script file (.scp) and
     selects the lines that match each element in ids and then stores this
@@ -14,16 +15,16 @@ def gen_feats_file(data_feats,ids,feat_filename):
         ids: Numpy array with the patterns to match
         feat_filename: Path to store the file with the subset
     """
-    if not os.path.isfile(feat_filename) :
-        new_feats=np.empty((0,2))
+    if not os.path.isfile(feat_filename):
+        new_feats = np.empty((0, 2))
         for iid in ids:
-            print iid
-            indices = [i for i, v in enumerate(data_feats[:,0]) if iid in v]
-            new_feats=np.vstack((new_feats,data_feats[indices,:]))
-        np.savetxt(feat_filename,new_feats,fmt="%s")
+            print(iid)
+            indices = [i for i, v in enumerate(data_feats[:, 0]) if iid in v]
+            new_feats = np.vstack((new_feats, data_feats[indices, :]))
+        np.savetxt(feat_filename, new_feats, fmt="%s")
 
 
-def train(feat_file,model_dir,M,ivector_dim=None,num_gselect=None):
+def train(feat_file, model_dir, M, ivector_dim=None, num_gselect=None):
     """
     This function will call the Bash script to train an i-vector extractor (and its corresponding UBM)
     Inputs:
@@ -36,20 +37,22 @@ def train(feat_file,model_dir,M,ivector_dim=None,num_gselect=None):
     Returns:
         num_gselect: Number of gaussians for the gaussian selection process so it can be used during the i-vectors extraction
     """
-    if num_gselect==None or ivector_dim == None:
-        k=int(np.log2(M))
-    if num_gselect==None:
-        num_gselect=k+1
-    if ivector_dim==None:
+    if num_gselect is None or ivector_dim is None:
+        k = int(np.log2(M))
+    if num_gselect is None:
+        num_gselect = k + 1
+    if ivector_dim is None:
         # Read to obtain the dimension of the feature vector
-        for key,mat in kaldi_io.read_mat_scp(feat_file):
-            feat_dim=mat.shape[1]
+        for key, mat in kaldi_io.read_mat_scp(feat_file):
+            feat_dim = mat.shape[1]
             break
-        ivector_dim=k*feat_dim
-    os.system("kaldi_ivector/train_ivector_models.sh "+str(M) +" "+ str(ivector_dim) + " " + str(num_gselect) + " " + feat_file + " " + model_dir)
+        ivector_dim = k * feat_dim
+    os.system(os.path.join(dir_name, "train_ivector_models.sh") + " " + str(M) + " " + str(ivector_dim) + " " + str(
+        num_gselect) + " " + feat_file + " " + model_dir)
     return num_gselect
 
-def extract(src_dir,feat_file,ivectors_dir,num_gselect):
+
+def extract(src_dir, feat_file, ivectors_dir, num_gselect):
     """
     The Bash script checks if the i-vectors have been extracted already.
     Inputs:
@@ -58,24 +61,14 @@ def extract(src_dir,feat_file,ivectors_dir,num_gselect):
         ivectors_dir: Path where the i-vectors will be stored
         num_gselect: Number of gaussians for the gaussian selection process. Should be the same as in train
     Returns:
-        ivectors: numpy array with the extracted i-vectors
-        keys: numpy array with the keys (ids) of each i-vector
-
+        str - scp filename with ivectors
     """
-    os.system("kaldi_ivector/extract_ivectors.sh --num-gselect "+str(num_gselect)+ " " + src_dir + " " + feat_file + " " + ivectors_dir)
-    keys=[]
-    ivectors=np.empty((0,0))
-    for key,mat in kaldi_io.read_vec_flt_scp(ivectors_dir+'/ivector.scp'):
-        if ivectors.shape[1] != mat.shape[0]:
-            ivectors=ivectors.reshape((0,mat.shape[0]))
-        ivectors=np.vstack((ivectors,mat))
-        keys.append(key)
+    os.system(os.path.join(dir_name, "extract_ivectors.sh") + " --num-gselect " + str(
+        num_gselect) + " " + src_dir + " " + feat_file + " " + ivectors_dir)
+    return os.path.join(ivectors_dir, 'ivector.scp')
 
-    ivectors=np.asarray(ivectors)
-    keys=np.asarray(keys)
-    return ivectors,keys
 
-def ivector_sbjs(ivectors,keys,ids):
+def ivector_sbjs(ivectors, keys, ids):
     """
     This function computes a single i-vector by taking the mean of all the
     i-vectors with keys that match certain pattern (e. g., the id of a speaker).
@@ -89,15 +82,15 @@ def ivector_sbjs(ivectors,keys,ids):
         ivectors_sbjs: numpy array with one i-vector per pattern in ids
         non_null: Indices of the non-null i-vectors
     """
-    ivectors_sbjs=np.empty((0,ivectors.shape[1]))
-    non_null=[]
-    for jdx,iid in enumerate(ids):
-        indices=np.asarray([i for i, v in enumerate(keys) if iid in v])
-        if len(indices)>0:
-            ivector_sbj=np.mean(ivectors[indices,:],axis=0)
+    ivectors_sbjs = np.empty((0, ivectors.shape[1]))
+    non_null = []
+    for jdx, iid in enumerate(ids):
+        indices = np.asarray([i for i, v in enumerate(keys) if iid in v])
+        if len(indices) > 0:
+            ivector_sbj = np.mean(ivectors[indices, :], axis=0)
             non_null.append(jdx)
         else:
-            ivector_sbj=np.zeros(ivectors.shape[1])
-            print "Missing i-vector for id: {}".format(iid)
-        ivectors_sbjs=np.vstack((ivectors_sbjs,ivector_sbj))
+            ivector_sbj = np.zeros(ivectors.shape[1])
+            print("Missing i-vector for id: {}".format(iid))
+        ivectors_sbjs = np.vstack((ivectors_sbjs, ivector_sbj))
     return ivectors_sbjs, non_null

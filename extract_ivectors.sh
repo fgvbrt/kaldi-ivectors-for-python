@@ -9,6 +9,8 @@
 # This script extracts iVectors for a set of utterances, given
 # features and a trained iVector extractor.
 
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
 # Begin configuration section.
 nj=4
 num_gselect=20 # Gaussian-selection using diagonal model: number of Gaussians to select
@@ -20,7 +22,7 @@ posterior_scale=1.0 # This scale helps to control for successve features being h
 echo "$0 $@"  # Print the command line for logging
 
 if [ -f path.sh ]; then . ./path.sh; fi
-. kaldi_ivector/parse_options.sh || exit 1;
+. ./parse_options.sh || exit 1;
 
 
 if [ $# != 3 ]; then

@@ -1,3 +1,5 @@
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
 num_frames=5000000
 subsample=2 # subsample all features with this periodicity, in the main E-M phase.
 num_iters_init=20
@@ -9,7 +11,7 @@ remove_low_count_gaussians=true
 
 if [ -f path.sh ]; then . ./path.sh; fi
 
-. kaldi_ivector/parse_options.sh || exit 1;
+. ./parse_options.sh || exit 1;
 
 # Filename with the training characteristics
 data=$1
